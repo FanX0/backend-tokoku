@@ -12,4 +12,14 @@ class Order extends Model
     protected $fillable = [
         'invoice_id', 'product_id', 'qty', 'price'
     ];
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
 }
