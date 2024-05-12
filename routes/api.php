@@ -26,6 +26,9 @@ Route::prefix('admin')->group(function () {
 
         //categories resource
         Route::apiResource('/categories', App\Http\Controllers\Api\Admin\CategoryController::class, ['except' => ['create', 'edit'], 'as' => 'admin']);
+
+        //products resource
+        Route::apiResource('/products', App\Http\Controllers\Api\Admin\ProductController::class, ['except' => ['create', 'edit'], 'as' => 'admin']);
     });
 
 });
