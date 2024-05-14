@@ -112,6 +112,9 @@ Route::prefix('web')->group(function () {
 
     //checkout route
     Route::post('/checkout', [App\Http\Controllers\Api\Web\CheckoutController::class, 'store'], ['as' => 'web'])->middleware('api_customer');
+
+    //notification handler route
+    Route::post('/notification', [App\Http\Controllers\Api\Web\NotificationHandlerController::class, 'index'], ['as' => 'web']);
 });
 
 
