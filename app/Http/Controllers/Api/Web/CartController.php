@@ -6,13 +6,20 @@ use App\Models\Cart;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CartResource;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class CartController extends Controller
+class CartController extends Controller implements HasMiddleware
 {
-    public function __construct()
+
+    //laravel 11 middleware
+    public static function middleware(): array
     {
-        $this->middleware('auth:api_customer');
+        return [
+            'auth:api_customer',
+        ];
     }
+
 
     public function index()
     {
