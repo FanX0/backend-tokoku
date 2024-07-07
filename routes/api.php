@@ -74,7 +74,12 @@ Route::prefix('customer')->group(function () {
 
         //review
         Route::post('/reviews', [App\Http\Controllers\Api\Customer\ReviewController::class, 'store'], ['as' => 'customer']);
+
+
+        //skinDetail resource
+        Route::apiResource('/skinDetail', App\Http\Controllers\Api\Customer\SkinDetailController::class, ['except' => ['create', 'edit', 'destroy'], 'as' => 'customer']);
     });
+
 });
 
 Route::prefix('web')->group(function () {
@@ -111,10 +116,14 @@ Route::prefix('web')->group(function () {
     Route::post('/carts/remove', [App\Http\Controllers\Api\Web\CartController::class, 'removeCart'], ['as' => 'web']);
 
     //checkout route
-    Route::post('/checkout', [App\Http\Controllers\Api\Web\CheckoutController::class, 'store'], ['as' => 'web'])->middleware('api_customer');
+    Route::post('/checkout', [App\Http\Controllers\Api\Web\CheckoutController::class, 'store'], ['as' => 'web'])->middleware('auth:api_customer');
 
     //notification handler route
     Route::post('/notification', [App\Http\Controllers\Api\Web\NotificationHandlerController::class, 'index'], ['as' => 'web']);
+
+     //recommended product
+     Route::get('/recommendedProduct', [App\Http\Controllers\Api\Web\RecommendedProductController::class, 'index'], ['as' => 'web']);
+
 });
 
 
