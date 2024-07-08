@@ -13,6 +13,13 @@ use App\Http\Resources\CheckoutResource;
 
 class CheckoutController extends Controller
 {
+    protected $response = [];
+
+    /**
+     * __construct
+     *
+     * @return void
+     */
     public function __construct()
     {
         // Set midtrans configuration
@@ -22,11 +29,15 @@ class CheckoutController extends Controller
         \Midtrans\Config::$is3ds        = config('services.midtrans.is3ds');
     }
 
+    /**
+     * store
+     *
+     * @param  mixed $request
+     * @return void
+     */
     public function store(Request $request)
     {
-
         DB::transaction(function() use ($request) {
-
             /**
              * algorithm generate no invoice
              */
@@ -58,7 +69,6 @@ class CheckoutController extends Controller
 
             //store orders by invoice
             foreach (Cart::where('customer_id', auth()->guard('api_customer')->user()->id)->get() as $cart) {
-
                 //insert product ke table order
                 $invoice->orders()->create([
                     'invoice_id'    => $invoice->id,
@@ -66,7 +76,6 @@ class CheckoutController extends Controller
                     'qty'           => $cart->qty,
                     'price'         => $cart->price,
                 ]);
-
             }
 
             //remove cart by customer
@@ -97,11 +106,9 @@ class CheckoutController extends Controller
 
             //make response "snap_token"
             $this->response['snap_token'] = $snapToken;
-
         });
 
         //return with Api Resource
-        return New CheckoutResource(true, 'Checkout Successfully', $this->response);
-
+        return new CheckoutResource(true, 'Checkout Successfully', $this->response);
     }
 }
