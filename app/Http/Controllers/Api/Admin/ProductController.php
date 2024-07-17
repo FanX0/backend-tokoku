@@ -7,155 +7,185 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
+use App\Models\CustomerToken;
+use App\Services\GoogleAccessTokenService;
+use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
+
+    protected $googleAccessTokenService;
+
+    public function __construct(GoogleAccessTokenService $googleAccessTokenService)
+    {
+        $this->googleAccessTokenService = $googleAccessTokenService;
+    }
+
+
     public function index()
     {
-        //get products
-        $products = Product::with('category')->when(request()->q, function($products) {
-            $products = $products->where('title', 'like', '%'. request()->q . '%');
-        })->latest()->paginate(5);
+        // Get products with optional search query
+        $products = Product::with('category')
+            ->when(request()->q, function($query) {
+                $query->where('title', 'like', '%' . request()->q . '%');
+            })
+            ->latest()
+            ->paginate(5);
 
-        //return with Api Resource
         return new ProductResource(true, 'List Data Products', $products);
     }
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'image'         => 'required|image|mimes:jpeg,jpg,png|max:2000',
-            'title'         => 'required|unique:products',
-            'category_id'   => 'required',
-            'description'   => 'required',
-            'weight'        => 'required',
-            'price'         => 'required',
-            'stock'         => 'required',
-            'discount'      => 'required'
-        ]);
+        $validator = $this->validateProduct($request);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        //upload image
-        $image = $request->file('image');
-        $image->storeAs('public/products', $image->hashName());
+        // Upload image
+        $imageName = $this->handleImageUpload($request->file('image'));
 
-        //create product
-        $product = Product::create([
-            'image'         => $image->hashName(),
-            'title'         => $request->title,
-            'slug'          => Str::slug($request->title, '-'),
-            'category_id'   => $request->category_id,
-            'user_id'       => auth()->guard('api_admin')->user()->id,
-            'description'   => $request->description,
-            'weight'        => $request->weight,
-            'price'         => $request->price,
-            'stock'         => $request->stock,
-            'discount'      => $request->discount
-        ]);
+        // Create product
+        $product = Product::create($this->getProductData($request, $imageName));
 
-        if($product) {
-            //return success with Api Resource
+        if ($product) {
+            $this->sendPushNotification($product);
             return new ProductResource(true, 'Data Product Berhasil Disimpan!', $product);
         }
 
-        //return failed with Api Resource
         return new ProductResource(false, 'Data Product Gagal Disimpan!', null);
     }
 
     public function show($id)
     {
-        $product = Product::whereId($id)->first();
+        $product = Product::find($id);
 
-        if($product) {
-            //return success with Api Resource
+        if ($product) {
             return new ProductResource(true, 'Detail Data Product!', $product);
         }
 
-        //return failed with Api Resource
         return new ProductResource(false, 'Detail Data Product Tidak Ditemukan!', null);
     }
 
     public function update(Request $request, Product $product)
     {
-        $validator = Validator::make($request->all(), [
-            'title'         => 'required|unique:products,title,'.$product->id,
-            'category_id'   => 'required',
-            'description'   => 'required',
-            'weight'        => 'required',
-            'price'         => 'required',
-            'stock'         => 'required',
-            'discount'      => 'required'
-        ]);
+        $validator = $this->validateProduct($request, $product->id);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        //check image update
         if ($request->file('image')) {
-
-            //remove old image
-            Storage::disk('local')->delete('public/products/'.basename($product->image));
-
-            //upload new image
-            $image = $request->file('image');
-            $image->storeAs('public/products', $image->hashName());
-
-            //update product with new image
-            $product->update([
-                'image'         => $image->hashName(),
-                'title'         => $request->title,
-                'slug'          => Str::slug($request->title, '-'),
-                'category_id'   => $request->category_id,
-                'user_id'       => auth()->guard('api_admin')->user()->id,
-                'description'   => $request->description,
-                'weight'        => $request->weight,
-                'price'         => $request->price,
-                'stock'         => $request->stock,
-                'discount'      => $request->discount
-            ]);
-
+            // Remove old image and upload new image
+            Storage::disk('local')->delete('public/products/' . basename($product->image));
+            $imageName = $this->handleImageUpload($request->file('image'));
+            $product->image = $imageName;
         }
 
-        //update product without image
-        $product->update([
-            'title'         => $request->title,
-            'slug'          => Str::slug($request->title, '-'),
-            'category_id'   => $request->category_id,
-            'user_id'       => auth()->guard('api_admin')->user()->id,
-            'description'   => $request->description,
-            'weight'        => $request->weight,
-            'price'         => $request->price,
-            'stock'         => $request->stock,
-            'discount'      => $request->discount
-        ]);
+        $product->update($this->getProductData($request, $product->image));
 
-        if($product) {
-            //return success with Api Resource
-            return new ProductResource(true, 'Data Product Berhasil Diupdate!', $product);
-        }
-
-        //return failed with Api Resource
-        return new ProductResource(false, 'Data Product Gagal Diupdate!', null);
+        return new ProductResource(true, 'Data Product Berhasil Diupdate!', $product);
     }
-
 
     public function destroy(Product $product)
     {
-        //remove image
-        Storage::disk('local')->delete('public/products/'.basename($product->image));
+        // Remove image
+        Storage::disk('local')->delete('public/products/' . basename($product->image));
 
-        if($product->delete()) {
-            //return success with Api Resource
+        if ($product->delete()) {
             return new ProductResource(true, 'Data Product Berhasil Dihapus!', null);
         }
 
-        //return failed with Api Resource
         return new ProductResource(false, 'Data Product Gagal Dihapus!', null);
     }
+
+    protected function validateProduct(Request $request, $productId = null)
+    {
+        $rules = [
+            'image' => 'sometimes|required|image|mimes:jpeg,jpg,png|max:2000',
+            'title' => 'required|unique:products,title,' . $productId,
+            'category_id' => 'required',
+            'description' => 'required',
+            'weight' => 'required',
+            'price' => 'required',
+            'stock' => 'required',
+            'discount' => 'required'
+        ];
+
+        return Validator::make($request->all(), $rules);
+    }
+
+    protected function handleImageUpload($image)
+    {
+        $image->storeAs('public/products', $image->hashName());
+        return $image->hashName();
+    }
+
+    protected function getProductData(Request $request, $imageName)
+    {
+        return [
+            'image' => $imageName,
+            'title' => $request->title,
+            'slug' => Str::slug($request->title, '-'),
+            'category_id' => $request->category_id,
+            'user_id' => auth()->guard('api_admin')->user()->id,
+            'description' => $request->description,
+            'weight' => $request->weight,
+            'price' => $request->price,
+            'stock' => $request->stock,
+            'discount' => $request->discount
+        ];
+    }
+
+    protected function sendPushNotification($product)
+{
+    $accessToken = $this->googleAccessTokenService->getAccessToken();
+    Log::info('Access Token: ' . $accessToken);
+    $tokens = CustomerToken::with('customer')->get()->pluck('token')->toArray();
+    $firebaseToken = array_filter($tokens);
+
+    Log::info('FCM Tokens: ', $firebaseToken);
+
+    // Creating the message payload
+    $data = [
+        "message" => [
+            "notification" => [
+                "body" => $product->description,
+                "title" => "New Product: " . $product->title,
+            ]
+        ]
+    ];
+
+    // If only one token, add it to the message payload
+    if (count($firebaseToken) == 1) {
+        $data["message"]["token"] = $firebaseToken[0];
+    } else {
+        // For multiple tokens, use 'tokens'
+        $data["message"]["token"] = $firebaseToken[0]; // Adjusted for single token usage, change logic for batch messaging if needed.
+    }
+
+    Log::info('LOG SAYA: ', $data);
+
+    try {
+        $client = new Client();
+        $response = $client->post('https://fcm.googleapis.com/v1/projects/push-notification-57bbc/messages:send', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $accessToken,
+                'Content-Type' => 'application/json',
+            ],
+            'json' => $data,
+        ]);
+
+        if ($response->getStatusCode() != 200) {
+            Log::error('Error sending push notification: ' . $response->getBody());
+        }
+    } catch (\Exception $e) {
+        Log::error('Exception sending push notification: ' . $e->getMessage());
+    }
+}
+
 }
