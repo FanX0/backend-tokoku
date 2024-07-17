@@ -75,6 +75,10 @@ Route::prefix('customer')->group(function () {
         //review
         Route::post('/reviews', [App\Http\Controllers\Api\Customer\ReviewController::class, 'store'], ['as' => 'customer']);
 
+        //token
+        Route::post('/token', [App\Http\Controllers\Api\Customer\CustomerTokenController::class, 'store'], ['as' => 'customer']);
+
+
 
         //skinDetail resource
         Route::apiResource('/skinDetail', App\Http\Controllers\Api\Customer\SkinDetailController::class, ['except' => ['create', 'edit', 'destroy'], 'as' => 'customer']);
