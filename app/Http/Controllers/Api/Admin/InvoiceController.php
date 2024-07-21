@@ -5,18 +5,36 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\InvoiceResource;
 use App\Models\Invoice;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class InvoiceController extends Controller
 {
     public function index()
-    {
-        $invoices = Invoice::with('customer')->when(request()->q, function($invoices) {
-            $invoices = $invoices->where('invoice', 'like', '%'. request()->q . '%');
-        })->latest()->paginate(5);
+{
+    // Get all invoices with their customers
+    $invoices = Invoice::with('customer')->get();
 
-        //return with Api Resource
-        return new InvoiceResource(true, 'List Data Invoices', $invoices);
+    // Check if there is a search query
+    $searchQuery = request()->q;
+
+    // Sequential search
+    if ($searchQuery) {
+        $filteredInvoices = $invoices->filter(function($invoice) use ($searchQuery) {
+            return stripos($invoice->invoice, $searchQuery) !== false;
+        });
+    } else {
+        $filteredInvoices = $invoices;
     }
+
+    // Convert filtered collection to a query builder
+    $query = Invoice::whereIn('id', $filteredInvoices->pluck('id')->toArray());
+
+    // Paginate the filtered results
+    $paginatedInvoices = $query->paginate(5);
+
+    // Return with API Resource
+    return new InvoiceResource(true, 'List Data Invoices', $paginatedInvoices);
+}
 
     public function show($id)
     {
