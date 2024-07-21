@@ -5,24 +5,41 @@ namespace App\Http\Controllers\Api\Web;
 use App\Models\Product;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ProductController extends Controller
 {
     public function index()
-    {
-        //get products
-        $products = Product::with('category')
-        //count and average
+{
+    // Get all products with their categories, average ratings, and review counts
+    $products = Product::with('category')
         ->withAvg('reviews', 'rating')
         ->withCount('reviews')
-        //search
-        ->when(request()->q, function($products) {
-            $products = $products->where('title', 'like', '%'. request()->q . '%');
-        })->latest()->paginate(8);
+        ->get();
 
-        //return with Api Resource
-        return new ProductResource(true, 'List Data Products', $products);
+    // Check if there is a search query
+    $searchQuery = request()->q;
+
+    // Sequential search
+    if ($searchQuery) {
+        $filteredProducts = $products->filter(function($product) use ($searchQuery) {
+            return stripos($product->title, $searchQuery) !== false;
+        });
+    } else {
+        $filteredProducts = $products;
     }
+
+    // Paginate the filtered results manually
+    $perPage = 8;
+    $currentPage = LengthAwarePaginator::resolveCurrentPage();
+    $currentItems = $filteredProducts->slice(($currentPage - 1) * $perPage, $perPage)->values();
+    $paginatedProducts = new LengthAwarePaginator($currentItems, $filteredProducts->count(), $perPage, $currentPage, [
+        'path' => LengthAwarePaginator::resolveCurrentPath(),
+    ]);
+
+    // Return with API Resource
+    return new ProductResource(true, 'List Data Products', $paginatedProducts);
+}
 
     public function show($slug)
     {
