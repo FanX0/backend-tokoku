@@ -47,17 +47,23 @@ class SkinDetailController extends Controller
     $recommendedProducts = [];
 
     switch ($request->jenis_kulit) {
-        case 'normal':
-            $recommendedProducts = [Product::find(1), Product::find(5)];
-            break;
         case 'berminyak':
-            $recommendedProducts = [Product::find(2)];
+            $recommendedProducts = [Product::find(46), Product::find(29), Product::find(31)];
             break;
         case 'kering':
-            $recommendedProducts = [Product::find(3)];
+            $recommendedProducts = [Product::find(46), Product::find(31)];
             break;
-        case 'kombinasi':
-            $recommendedProducts = [Product::find(4)];
+        case 'berflek':
+            $recommendedProducts = [Product::find(30), Product::find(45), Product::find(34), Product::find(31)];
+            break;
+        case 'normal':
+            $recommendedProducts =[Product::find(46), Product::find(31), Product::find(44)];
+            break;
+        case 'bumil':
+            $recommendedProducts = [Product::find(28)];
+            break;
+        case 'berjerawat':
+            $recommendedProducts = [Product::find(35)];
             break;
     }
 
@@ -129,17 +135,23 @@ class SkinDetailController extends Controller
         $recommendedProducts = [];
 
         switch ($request->jenis_kulit) {
-            case 'normal':
-                $recommendedProducts = [Product::find(1), Product::find(5)];
-                break;
             case 'berminyak':
-                $recommendedProducts = [Product::find(2)];
+                $recommendedProducts = [Product::find(46), Product::find(29), Product::find(31)];
                 break;
             case 'kering':
-                $recommendedProducts = [Product::find(3)];
+                $recommendedProducts = [Product::find(46), Product::find(31)];
                 break;
-            case 'kombinasi':
-                $recommendedProducts = [Product::find(4)];
+            case 'berflek':
+                $recommendedProducts = [Product::find(30), Product::find(45), Product::find(34), Product::find(31)];
+                break;
+            case 'normal':
+                $recommendedProducts =[Product::find(46), Product::find(31), Product::find(44)];
+                break;
+            case 'bumil':
+                $recommendedProducts = [Product::find(28)];
+                break;
+            case 'berjerawat':
+                $recommendedProducts = [Product::find(35)];
                 break;
         }
 
