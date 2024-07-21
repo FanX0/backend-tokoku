@@ -8,19 +8,36 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\CategoryResource;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Validator;
 
 class CategoryController extends Controller
 {
     public function index()
     {
-        //get categories
-        $categories = Category::when(request()->q, function($categories) {
-            $categories = $categories->where('name', 'like', '%'. request()->q . '%');
-        })->latest()->paginate(5);
+        // Get all categories
+        $categories = Category::all();
 
-        //return with Api Resource
-        return new CategoryResource(true, 'List Data Categories', $categories);
+        // Check if there is a search query
+        $searchQuery = request()->q;
+
+        // Sequential search
+        if ($searchQuery) {
+            $filteredCategories = $categories->filter(function($category) use ($searchQuery) {
+                return stripos($category->name, $searchQuery) !== false;
+            });
+        } else {
+            $filteredCategories = $categories;
+        }
+
+        // Convert filtered collection to a query builder
+        $query = Category::whereIn('id', $filteredCategories->pluck('id')->toArray());
+
+        // Paginate the filtered results
+        $paginatedCategories = $query->paginate(5);
+
+        // Return with API Resource
+        return new CategoryResource(true, 'List Data Categories', $paginatedCategories);
     }
 
     public function store(Request $request)
