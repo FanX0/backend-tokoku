@@ -43,4 +43,9 @@ class Customer extends Authenticatable implements JWTSubject
     {
         return [];
     }
+
+    public function rekomendedProducts()
+    {
+        return $this->hasMany(RecommendedProduct::class, 'customer_id');
+    }
 }

@@ -49,6 +49,13 @@ return [
 
         'isSanitized'   => env('MIDTRANS_IS_SANITIZED', true),
         'is3ds'         => env('MIDTRANS_IS_3DS', true),
-     ]
+    ],
+
+    'fcm' => [
+        'key' => env('FCM_SERVER_KEY'),
+    ],
+    'google' => [
+    'credentials_file' => env('GOOGLE_APPLICATION_CREDENTIALS'),
+    ],
 
 ];
